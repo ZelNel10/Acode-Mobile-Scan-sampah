@@ -1,12 +1,117 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Document</title>
+    <meta charset="UTF-8">
+    <title>Scan Sampah</title>
+    <style>
+    body {
+    font-family: Arial, sans-serif;
+    background: #e0f2f1;
+    text-align: center;
+}
+
+.container {
+    background: white;
+    max-width: 400px;
+    margin: 30px auto;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+video {
+    width: 100%;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+
+button {
+    margin-top: 15px;
+    padding: 10px 20px;
+    border: none;
+    background: #009688;
+    color: white;
+    font-size: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #00796b;
+}
+
+#hasil {
+    margin-top: 20px;
+}
+</style>
+
+    <!-- TensorFlow JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
 </head>
 <body>
-  <h1>Scan Sampah</h1>
+
+<div class="container">
+    <h1>📷 Scan Sampah AI</h1>
+    <p>Arahkan kamera ke sampah</p>
+
+    <video id="camera" autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <button onclick="scanSampah()">Scan Sekarang</button>
+
+    <h2 id="hasil">Menunggu scan...</h2>
+</div>
+
+<script>
+  const video = document.getElementById("camera");
+const canvas = document.getElementById("canvas");
+const hasil = document.getElementById("hasil");
+const ctx = canvas.getContext("2d");
+
+let model;
+
+// Aktifkan kamera HP
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+        video.srcObject = stream;
+    })
+    .catch(err => {
+        alert("Kamera tidak bisa diakses!");
+    });
+
+// Load model AI
+async function loadModel() {
+    hasil.innerHTML = "⏳ Memuat AI...";
+    model = await mobilenet.load();
+    hasil.innerHTML = "✅ AI siap digunakan";
+}
+loadModel();
+
+// Scan sampah
+async function scanSampah() {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    const predictions = await model.classify(canvas);
+    const objek = predictions[0].className.toLowerCase();
+
+    // Logika klasifikasi
+    if (
+        objek.includes("banana") ||
+        objek.includes("food") ||
+        objek.includes("leaf") ||
+        objek.includes("plant") ||
+        objek.includes("fruit")
+    ) {
+        hasil.innerHTML = `🌿 ORGANIK<br>${objek}`;
+        hasil.style.color = "green";
+    } else {
+        hasil.innerHTML = `♻️ ANORGANIK<br>${objek}`;
+        hasil.style.color = "blue";
+    }
+}
+</script>
 </body>
 </html>
