@@ -76,82 +76,38 @@
 </div>
 
 <script>
-    const video = document.getElementById("camera");
-    const canvas = document.getElementById("canvas");
-    const hasil = document.getElementById("hasil");
-    const cameraArea = document.getElementById("cameraArea");
-    const toggleBtn = document.getElementById("toggleCameraBtn");
-    const ctx = canvas.getContext("2d");
-
-    let model;
-    let stream = null;
-    let kameraAktif = false;
-
-    // Load AI
-    async function loadModel() {
-        hasil.innerHTML = "⏳ Memuat AI...";
-        model = await mobilenet.load();
-        hasil.innerHTML = "✅ AI siap, tekan Buka Scan";
-    }
-    loadModel();
-
-    // Toggle scan (buka / tutup kamera)
-    async function toggleScan() {
-        if (!kameraAktif) {
-            // BUKA KAMERA
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" }
-                });
-                video.srcObject = stream;
-                cameraArea.classList.remove("hidden");
-
-                toggleBtn.innerHTML = "❌ Tutup Scan";
-                hasil.innerHTML = "📷 Kamera aktif, arahkan ke sampah";
-                kameraAktif = true;
-            } catch (err) {
-                hasil.innerHTML = "❌ Kamera tidak dapat diakses";
-            }
-        } else {
-            // TUTUP KAMERA
-            stream.getTracks().forEach(track => track.stop());
-            video.srcObject = null;
-            cameraArea.classList.add("hidden");
-
-            toggleBtn.innerHTML = "📷 Buka Scan";
-            hasil.innerHTML = "🔒 Kamera dimatikan";
-            kameraAktif = false;
-        }
+async function scanSampah() {
+    if (!model) {
+        hasil.innerHTML = "⚠️ AI belum siap";
+        return;
     }
 
-    // Scan sampah
-    async function scanSampah() {
-        if (!kameraAktif || !model) {
-            hasil.innerHTML = "⚠️ Kamera belum aktif";
-            return;
-        }
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
-
-        const predictions = await model.classify(canvas);
-        const objek = predictions[0].className.toLowerCase();
-
-        if (
-            objek.includes("banana") ||
-            objek.includes("food") ||
-            objek.includes("leaf") ||
-            objek.includes("plant") ||
-            objek.includes("fruit")
-        ) {
-            hasil.innerHTML = `🌿 <b>ORGANIK</b><br>${objek}`;
-            hasil.style.color = "green";
-        } else {
-            hasil.innerHTML = `♻️ <b>ANORGANIK</b><br>${objek}`;
-            hasil.style.color = "blue";
-        }
+    if (video.readyState < 2) {
+        hasil.innerHTML = "⚠️ Kamera belum siap, tunggu sebentar...";
+        return;
     }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    const predictions = await model.classify(canvas);
+    const objek = predictions[0].className.toLowerCase();
+
+    if (
+        objek.includes("banana") ||
+        objek.includes("food") ||
+        objek.includes("leaf") ||
+        objek.includes("plant") ||
+        objek.includes("fruit")
+    ) {
+        hasil.innerHTML = `🌿 <b>ORGANIK</b><br>${objek}`;
+        hasil.style.color = "green";
+    } else {
+        hasil.innerHTML = `♻️ <b>ANORGANIK</b><br>${objek}`;
+        hasil.style.color = "blue";
+    }
+}
 </script>
 
 </body>
