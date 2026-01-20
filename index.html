@@ -58,56 +58,103 @@
 <body>
 
 <div class="container">
-    <h1>♻️ Scan Sampah</h1>
+    <h1>♻️ Scan Sampah AI</h1>
     <p>Pilah sampah organik & anorganik</p>
 
-    <!-- Tombol Toggle -->
+    <!-- Tombol toggle kamera -->
     <button id="toggleCameraBtn" onclick="toggleScan()">📷 Buka Scan</button>
 
-    <!-- Area Kamera -->
+    <!-- Area kamera -->
     <div id="cameraArea" class="hidden">
         <video id="camera" autoplay playsinline></video>
         <canvas id="canvas" class="hidden"></canvas>
-
         <button onclick="scanSampah()">🔍 Scan Sampah</button>
     </div>
 
-    <div id="hasil">Menunggu perintah...</div>
+    <div id="hasil">⏳ Memuat AI...</div>
 </div>
 
 <script>
-async function scanSampah() {
-    if (!model) {
-        hasil.innerHTML = "⚠️ AI belum siap";
-        return;
+    const video = document.getElementById("camera");
+    const canvas = document.getElementById("canvas");
+    const hasil = document.getElementById("hasil");
+    const cameraArea = document.getElementById("cameraArea");
+    const toggleBtn = document.getElementById("toggleCameraBtn");
+    const ctx = canvas.getContext("2d");
+
+    let model = null;
+    let stream = null;
+
+    // Load AI model
+    async function loadModel() {
+        model = await mobilenet.load();
+        hasil.innerHTML = "✅ AI siap, tekan Buka Scan";
+    }
+    loadModel();
+
+    // Toggle kamera (BUKA / TUTUP)
+    async function toggleScan() {
+        if (stream === null) {
+            // BUKA KAMERA
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
+                });
+
+                video.srcObject = stream;
+                cameraArea.classList.remove("hidden");
+                toggleBtn.innerHTML = "❌ Tutup Scan";
+                hasil.innerHTML = "📷 Kamera aktif, arahkan ke sampah";
+
+            } catch (err) {
+                hasil.innerHTML = "❌ Kamera tidak dapat diakses";
+                stream = null;
+            }
+        } else {
+            // TUTUP KAMERA
+            stream.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
+            stream = null;
+
+            cameraArea.classList.add("hidden");
+            toggleBtn.innerHTML = "📷 Buka Scan";
+            hasil.innerHTML = "🔒 Kamera dimatikan";
+        }
     }
 
-    if (video.readyState < 2) {
-        hasil.innerHTML = "⚠️ Kamera belum siap, tunggu sebentar...";
-        return;
+    // Scan sampah
+    async function scanSampah() {
+        if (!model) {
+            hasil.innerHTML = "⚠️ AI belum siap";
+            return;
+        }
+
+        if (video.readyState < 2) {
+            hasil.innerHTML = "⚠️ Kamera belum siap, tunggu sebentar...";
+            return;
+        }
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+
+        const predictions = await model.classify(canvas);
+        const objek = predictions[0].className.toLowerCase();
+
+        if (
+            objek.includes("banana") ||
+            objek.includes("food") ||
+            objek.includes("leaf") ||
+            objek.includes("plant") ||
+            objek.includes("fruit")
+        ) {
+            hasil.innerHTML = `🌿 <b>ORGANIK</b><br>${objek}`;
+            hasil.style.color = "green";
+        } else {
+            hasil.innerHTML = `♻️ <b>ANORGANIK</b><br>${objek}`;
+            hasil.style.color = "blue";
+        }
     }
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
-
-    const predictions = await model.classify(canvas);
-    const objek = predictions[0].className.toLowerCase();
-
-    if (
-        objek.includes("banana") ||
-        objek.includes("food") ||
-        objek.includes("leaf") ||
-        objek.includes("plant") ||
-        objek.includes("fruit")
-    ) {
-        hasil.innerHTML = `🌿 <b>ORGANIK</b><br>${objek}`;
-        hasil.style.color = "green";
-    } else {
-        hasil.innerHTML = `♻️ <b>ANORGANIK</b><br>${objek}`;
-        hasil.style.color = "blue";
-    }
-}
 </script>
 
 </body>
