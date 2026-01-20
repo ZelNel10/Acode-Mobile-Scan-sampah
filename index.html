@@ -2,116 +2,157 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Scan Sampah</title>
-    <style>
-    body {
-    font-family: Arial, sans-serif;
-    background: #e0f2f1;
-    text-align: center;
-}
+    <title>Scan Sampah AI</title>
 
-.container {
-    background: white;
-    max-width: 400px;
-    margin: 30px auto;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-video {
-    width: 100%;
-    border-radius: 10px;
-    margin-top: 10px;
-}
-
-button {
-    margin-top: 15px;
-    padding: 10px 20px;
-    border: none;
-    background: #009688;
-    color: white;
-    font-size: 16px;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-button:hover {
-    background: #00796b;
-}
-
-#hasil {
-    margin-top: 20px;
-}
-</style>
-
-    <!-- TensorFlow JS -->
+    <!-- TensorFlow -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #e0f2f1;
+            text-align: center;
+        }
+
+        .container {
+            background: white;
+            max-width: 420px;
+            margin: 30px auto;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        video {
+            width: 100%;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 12px 20px;
+            border: none;
+            background: #009688;
+            color: white;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #00796b;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #hasil {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📷 Scan Sampah AI</h1>
-    <p>Arahkan kamera ke sampah</p>
+    <h1>♻️ Scan Sampah AI</h1>
+    <p>Pilah sampah organik & anorganik</p>
 
-    <video id="camera" autoplay></video>
-    <canvas id="canvas"></canvas>
+    <!-- Tombol Toggle -->
+    <button id="toggleCameraBtn" onclick="toggleScan()">📷 Buka Scan</button>
 
-    <button onclick="scanSampah()">Scan Sekarang</button>
+    <!-- Area Kamera -->
+    <div id="cameraArea" class="hidden">
+        <video id="camera" autoplay playsinline></video>
+        <canvas id="canvas" class="hidden"></canvas>
 
-    <h2 id="hasil">Menunggu scan...</h2>
+        <button onclick="scanSampah()">🔍 Scan Sampah</button>
+    </div>
+
+    <div id="hasil">Menunggu perintah...</div>
 </div>
 
 <script>
-  const video = document.getElementById("camera");
-const canvas = document.getElementById("canvas");
-const hasil = document.getElementById("hasil");
-const ctx = canvas.getContext("2d");
+    const video = document.getElementById("camera");
+    const canvas = document.getElementById("canvas");
+    const hasil = document.getElementById("hasil");
+    const cameraArea = document.getElementById("cameraArea");
+    const toggleBtn = document.getElementById("toggleCameraBtn");
+    const ctx = canvas.getContext("2d");
 
-let model;
+    let model;
+    let stream = null;
+    let kameraAktif = false;
 
-// Aktifkan kamera HP
-navigator.mediaDevices.getUserMedia({ video: true })
-    .then(stream => {
-        video.srcObject = stream;
-    })
-    .catch(err => {
-        alert("Kamera tidak bisa diakses!");
-    });
-
-// Load model AI
-async function loadModel() {
-    hasil.innerHTML = "⏳ Memuat AI...";
-    model = await mobilenet.load();
-    hasil.innerHTML = "✅ AI siap digunakan";
-}
-loadModel();
-
-// Scan sampah
-async function scanSampah() {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
-
-    const predictions = await model.classify(canvas);
-    const objek = predictions[0].className.toLowerCase();
-
-    // Logika klasifikasi
-    if (
-        objek.includes("banana") ||
-        objek.includes("food") ||
-        objek.includes("leaf") ||
-        objek.includes("plant") ||
-        objek.includes("fruit")
-    ) {
-        hasil.innerHTML = `🌿 ORGANIK<br>${objek}`;
-        hasil.style.color = "green";
-    } else {
-        hasil.innerHTML = `♻️ ANORGANIK<br>${objek}`;
-        hasil.style.color = "blue";
+    // Load AI
+    async function loadModel() {
+        hasil.innerHTML = "⏳ Memuat AI...";
+        model = await mobilenet.load();
+        hasil.innerHTML = "✅ AI siap, tekan Buka Scan";
     }
-}
+    loadModel();
+
+    // Toggle scan (buka / tutup kamera)
+    async function toggleScan() {
+        if (!kameraAktif) {
+            // BUKA KAMERA
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
+                });
+                video.srcObject = stream;
+                cameraArea.classList.remove("hidden");
+
+                toggleBtn.innerHTML = "❌ Tutup Scan";
+                hasil.innerHTML = "📷 Kamera aktif, arahkan ke sampah";
+                kameraAktif = true;
+            } catch (err) {
+                hasil.innerHTML = "❌ Kamera tidak dapat diakses";
+            }
+        } else {
+            // TUTUP KAMERA
+            stream.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
+            cameraArea.classList.add("hidden");
+
+            toggleBtn.innerHTML = "📷 Buka Scan";
+            hasil.innerHTML = "🔒 Kamera dimatikan";
+            kameraAktif = false;
+        }
+    }
+
+    // Scan sampah
+    async function scanSampah() {
+        if (!kameraAktif || !model) {
+            hasil.innerHTML = "⚠️ Kamera belum aktif";
+            return;
+        }
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+
+        const predictions = await model.classify(canvas);
+        const objek = predictions[0].className.toLowerCase();
+
+        if (
+            objek.includes("banana") ||
+            objek.includes("food") ||
+            objek.includes("leaf") ||
+            objek.includes("plant") ||
+            objek.includes("fruit")
+        ) {
+            hasil.innerHTML = `🌿 <b>ORGANIK</b><br>${objek}`;
+            hasil.style.color = "green";
+        } else {
+            hasil.innerHTML = `♻️ <b>ANORGANIK</b><br>${objek}`;
+            hasil.style.color = "blue";
+        }
+    }
 </script>
+
 </body>
 </html>
