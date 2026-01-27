@@ -74,7 +74,7 @@ let stream = null;
 window.addEventListener("load", async () => {
     hasil.innerHTML = "⏳ Menyiapkan AI...";
     model = await mobilenet.load();
-    hasil.innerHTML = "✅ AI siap. Silahkan Scan.";
+    hasil.innerHTML = "AI siap silahkan scan";
 });
 
 // ================= TOGGLE SCAN =================
@@ -92,7 +92,7 @@ async function toggleScan(){
             video.srcObject = stream;
             await new Promise(r => video.onloadedmetadata = r);
 
-            hasil.innerHTML = "✅ Kamera aktif. Menunggu AI siap.";
+            hasil.innerHTML = "Kamera aktif. Menunggu AI siap.";
             toggleBtn.innerHTML = "❌ Tutup Scan";
             scanBtn.disabled = false;
             toggleBtn.disabled = false;
@@ -123,43 +123,24 @@ async function scanSampah(){
     const predictions = await model.classify(canvas, 5);
 
     const kategoriMap = [
-        {
-            nama: "Tumbuhan (Plants)",
-            jenis: "Organik",
-            kata: ["flower","plant","leaf","tree","grass","fruit","vegetable","banana","apple","orange"]
-        },
-        {
-            nama: "Makanan (Food)",
-            jenis: "Organik",
-            kata: ["food","bread","meat","rice","cake","pizza"]
-        },
-        {
-            nama: "Plastik",
-            jenis: "Anorganik",
-            kata: ["plastic","bottle","bag","cup","wrapper","packet","pouch","container"]
-        },
-        {
-            nama: "Logam / Kaleng",
-            jenis: "Anorganik",
-            kata: ["can","tin","metal","aluminum"]
-        },
-        {
-            nama: "Kaca",
-            jenis: "Anorganik",
-            kata: ["glass","jar"]
-        },
-        {
-            nama: "Kertas",
-            jenis: "Anorganik",
-            kata: ["paper","cardboard","book","newspaper"]
-        }
+        { nama: "Tumbuhan (Plants)", jenis: "Organik",
+          kata: ["flower","plant","leaf","tree","grass","fruit","vegetable","banana","apple","orange"] },
+        { nama: "Makanan (Food)", jenis: "Organik",
+          kata: ["food","bread","meat","rice","cake","pizza"] },
+        { nama: "Plastik", jenis: "Anorganik",
+          kata: ["plastic","bottle","bag","cup","wrapper","packet","pouch","container"] },
+        { nama: "Logam / Kaleng", jenis: "Anorganik",
+          kata: ["can","tin","metal","aluminum"] },
+        { nama: "Kaca", jenis: "Anorganik",
+          kata: ["glass","jar"] },
+        { nama: "Kertas", jenis: "Anorganik",
+          kata: ["paper","cardboard","book","newspaper"] }
     ];
 
     let skorKategori = {};
 
     predictions.forEach(pred => {
         const objek = pred.className.toLowerCase();
-
         kategoriMap.forEach(k => {
             k.kata.forEach(kata => {
                 if(objek.includes(kata)){
