@@ -51,7 +51,9 @@ button{
     <div id="cameraArea" class="hidden">
         <video id="video" autoplay playsinline></video>
         <canvas id="canvas" class="hidden"></canvas>
+
         <button id="scanBtn" onclick="scanSampah()" disabled>🔍 Scan Sampah</button>
+
         <div id="hasil">🔒 Scan belum dibuka</div>
     </div>
 </div>
@@ -68,11 +70,11 @@ const scanBtn = document.getElementById("scanBtn");
 let model;
 let stream = null;
 
-// ================= PRELOAD AI SAAT HALAMAN DIBUKA =================
+// ================= PRELOAD AI =================
 window.addEventListener("load", async () => {
     hasil.innerHTML = "⏳ Menyiapkan AI...";
     model = await mobilenet.load();
-    hasil.innerHTML = "✅ AI siap. Silahkan Scan.";
+    hasil.innerHTML = "✅ AI siap. Tekan Buka Scan.";
 });
 
 // ================= TOGGLE SCAN =================
@@ -88,10 +90,9 @@ async function toggleScan(){
             });
 
             video.srcObject = stream;
-
             await new Promise(r => video.onloadedmetadata = r);
 
-            hasil.innerHTML = "✅ Kamera aktif.  Menunggu AI siap";
+            hasil.innerHTML = "✅ Kamera aktif. Siap scan!";
             toggleBtn.innerHTML = "❌ Tutup Scan";
             scanBtn.disabled = false;
             toggleBtn.disabled = false;
@@ -113,32 +114,84 @@ async function toggleScan(){
     }
 }
 
-// ================= SCAN SAMPAH =================
+// ================= SCAN SAMPAH CERDAS =================
 async function scanSampah(){
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video,0,0);
 
-    const pred = await model.classify(canvas);
-    const objek = pred[0].className.toLowerCase();
-    const conf = (pred[0].probability*100).toFixed(2);
+    const predictions = await model.classify(canvas, 5);
 
-    if(
-        objek.includes("banana")||
-        objek.includes("apple")||
-        objek.includes("orange")||
-        objek.includes("food")||
-        objek.includes("leaf")||
-        objek.includes("plant")||
-        objek.includes("fruit")||
-        objek.includes("vegetable")
-    ){
-        hasil.innerHTML = `🌿 <b>ORGANIK</b><br>${objek}<br>${conf}%`;
-        hasil.style.color="green";
-    }else{
-        hasil.innerHTML = `♻️ <b>ANORGANIK</b><br>${objek}<br>${conf}%`;
-        hasil.style.color="blue";
-    }
+    const kategoriMap = [
+        {
+            nama: "Tumbuhan (Plants)",
+            jenis: "Organik",
+            kata: ["flower","plant","leaf","tree","grass","fruit","vegetable","banana","apple","orange"]
+        },
+        {
+            nama: "Makanan (Food)",
+            jenis: "Organik",
+            kata: ["food","bread","meat","rice","cake","pizza"]
+        },
+        {
+            nama: "Plastik",
+            jenis: "Anorganik",
+            kata: ["plastic","bottle","bag","cup","wrapper","packet","pouch","container"]
+        },
+        {
+            nama: "Logam / Kaleng",
+            jenis: "Anorganik",
+            kata: ["can","tin","metal","aluminum"]
+        },
+        {
+            nama: "Kaca",
+            jenis: "Anorganik",
+            kata: ["glass","jar"]
+        },
+        {
+            nama: "Kertas",
+            jenis: "Anorganik",
+            kata: ["paper","cardboard","book","newspaper"]
+        }
+    ];
+
+    let skorKategori = {};
+
+    predictions.forEach(pred => {
+        const objek = pred.className.toLowerCase();
+
+        kategoriMap.forEach(k => {
+            k.kata.forEach(kata => {
+                if(objek.includes(kata)){
+                    skorKategori[k.nama] = (skorKategori[k.nama] || 0) + 1;
+                }
+            });
+        });
+    });
+
+    let kategoriDitemukan = "Tidak diketahui";
+    let jenisSampah = "Tidak diketahui";
+    let skorTertinggi = 0;
+
+    kategoriMap.forEach(k => {
+        if((skorKategori[k.nama] || 0) > skorTertinggi){
+            skorTertinggi = skorKategori[k.nama];
+            kategoriDitemukan = k.nama;
+            jenisSampah = k.jenis;
+        }
+    });
+
+    const objekUtama = predictions[0].className;
+    const conf = (predictions[0].probability * 100).toFixed(2);
+
+    hasil.style.color = jenisSampah === "Organik" ? "green" : "blue";
+
+    hasil.innerHTML = `
+        🔎 <b>Objek Terdeteksi:</b> ${objekUtama} <br>
+        📂 <b>Kategori:</b> ${kategoriDitemukan} <br>
+        ♻️ <b>Jenis Sampah:</b> ${jenisSampah} <br>
+        📊 <b>Keyakinan AI:</b> ${conf}% 
+    `;
 }
 </script>
 
