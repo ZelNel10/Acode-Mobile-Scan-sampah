@@ -1,135 +1,110 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <title>Scan Sampah AI</title>
+<meta charset="UTF-8">
+<title>Scan Sampah AI</title>
 
-    <!-- TensorFlow -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #e0f2f1;
-            text-align: center;
-        }
-
-        .container {
-            background: white;
-            max-width: 420px;
-            margin: 30px auto;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        video {
-            width: 100%;
-            border-radius: 10px;
-            margin-top: 10px;
-        }
-
-        button {
-            margin-top: 15px;
-            padding: 12px 20px;
-            border: none;
-            background: #009688;
-            color: white;
-            font-size: 16px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #00796b;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        #hasil {
-            margin-top: 20px;
-            font-size: 18px;
-        }
-    </style>
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#e0f2f1;
+    text-align:center;
+}
+.container{
+    background:white;
+    max-width:420px;
+    margin:30px auto;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.2);
+}
+video{
+    width:100%;
+    border-radius:10px;
+    margin-top:10px;
+}
+button{
+    margin-top:15px;
+    padding:12px 20px;
+    border:none;
+    background:#009688;
+    color:white;
+    font-size:16px;
+    border-radius:6px;
+}
+.hidden{display:none;}
+#hasil{margin-top:15px;font-size:18px;}
+</style>
 </head>
+
 <body>
 
 <div class="container">
     <h1>♻️ Scan Sampah AI</h1>
     <p>Pilah sampah organik & anorganik</p>
 
-    <!-- Tombol toggle kamera -->
-    <button id="toggleCameraBtn" onclick="toggleScan()">📷 Buka Scan</button>
+    <button id="toggleBtn" onclick="toggleScan()">📷 Buka Scan</button>
 
-    <!-- Area kamera -->
     <div id="cameraArea" class="hidden">
-        <video id="camera" autoplay playsinline></video>
+        <video id="video" autoplay playsinline></video>
         <canvas id="canvas" class="hidden"></canvas>
-        <button onclick="scanSampah()">🔍 Scan Sampah</button>
+        <button id="scanBtn" onclick="scanSampah()" disabled>🔍 Scan Sampah</button>
+        <div id="hasil">🔒 Scan belum dibuka</div>
     </div>
-
-    <div id="hasil">⏳ Memuat AI...</div>
 </div>
 
 <script>
-const video = document.getElementById("camera");
+const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 const hasil = document.getElementById("hasil");
 const cameraArea = document.getElementById("cameraArea");
-const toggleBtn = document.getElementById("toggleCameraBtn");
+const toggleBtn = document.getElementById("toggleBtn");
 const scanBtn = document.getElementById("scanBtn");
-const ctx = canvas.getContext("2d");
 
-let model = null;
+let model;
 let stream = null;
 
+// ================= PRELOAD AI SAAT HALAMAN DIBUKA =================
+window.addEventListener("load", async () => {
+    hasil.innerHTML = "⏳ Menyiapkan AI...";
+    model = await mobilenet.load();
+    hasil.innerHTML = "✅ AI siap. Tekan Buka Scan.";
+});
 
-// =======================
-// TOGGLE SCAN (BUKA / TUTUP)
-// =======================
-async function toggleScan() {
-    if (stream === null) {
-        // ===== BUKA SCAN =====
+// ================= TOGGLE SCAN =================
+async function toggleScan(){
+    if(stream === null){
         cameraArea.classList.remove("hidden");
-        hasil.innerHTML = "⏳ Menyiapkan kamera & AI...";
-        scanBtn.disabled = true;
         toggleBtn.disabled = true;
+        hasil.innerHTML = "⏳ Mengaktifkan kamera...";
 
-        try {
-            // Aktifkan kamera belakang
+        try{
             stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment" }
+                video:{ facingMode:"environment" }
             });
+
             video.srcObject = stream;
 
-            // Tunggu video siap
-            await new Promise(resolve => {
-                video.onloadedmetadata = () => resolve();
-            });
+            await new Promise(r => video.onloadedmetadata = r);
 
-            // Load AI SEKARANG (bukan saat awal web)
-            model = await mobilenet.load();
-
-            hasil.innerHTML = "✅ Kamera & AI siap, silakan scan!";
+            hasil.innerHTML = "✅ Kamera aktif. Siap scan!";
             toggleBtn.innerHTML = "❌ Tutup Scan";
             scanBtn.disabled = false;
             toggleBtn.disabled = false;
 
-        } catch (err) {
-            hasil.innerHTML = "❌ Gagal menyiapkan kamera / AI";
-            stream = null;
+        }catch(err){
+            hasil.innerHTML = "❌ Gagal membuka kamera";
             toggleBtn.disabled = false;
         }
 
-    } else {
-        // ===== TUTUP SCAN =====
-        stream.getTracks().forEach(track => track.stop());
+    }else{
+        stream.getTracks().forEach(t => t.stop());
         video.srcObject = null;
         stream = null;
-        model = null;
 
         cameraArea.classList.add("hidden");
         toggleBtn.innerHTML = "📷 Buka Scan";
@@ -138,43 +113,31 @@ async function toggleScan() {
     }
 }
 
-
-// =======================
-// SCAN SAMPAH
-// =======================
-async function scanSampah() {
-    // Ambil gambar dari kamera
+// ================= SCAN SAMPAH =================
+async function scanSampah(){
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video,0,0);
 
-    // Kirim ke AI
-    const predictions = await model.classify(canvas);
-    const objek = predictions[0].className.toLowerCase();
-    const confidence = (predictions[0].probability * 100).toFixed(2);
+    const pred = await model.classify(canvas);
+    const objek = pred[0].className.toLowerCase();
+    const conf = (pred[0].probability*100).toFixed(2);
 
-    // LOGIKA ORGANIK / ANORGANIK
-    if (
-        objek.includes("banana") ||
-        objek.includes("apple") ||
-        objek.includes("orange") ||
-        objek.includes("food") ||
-        objek.includes("leaf") ||
-        objek.includes("plant") ||
-        objek.includes("fruit") ||
+    if(
+        objek.includes("banana")||
+        objek.includes("apple")||
+        objek.includes("orange")||
+        objek.includes("food")||
+        objek.includes("leaf")||
+        objek.includes("plant")||
+        objek.includes("fruit")||
         objek.includes("vegetable")
-    ) {
-        hasil.innerHTML =
-            `🌿 <b>ORGANIK</b><br>
-             Objek: ${objek}<br>
-             Keyakinan AI: ${confidence}%`;
-        hasil.style.color = "green";
-    } else {
-        hasil.innerHTML =
-            `♻️ <b>ANORGANIK</b><br>
-             Objek: ${objek}<br>
-             Keyakinan AI: ${confidence}%`;
-        hasil.style.color = "blue";
+    ){
+        hasil.innerHTML = `🌿 <b>ORGANIK</b><br>${objek}<br>${conf}%`;
+        hasil.style.color="green";
+    }else{
+        hasil.innerHTML = `♻️ <b>ANORGANIK</b><br>${objek}<br>${conf}%`;
+        hasil.style.color="blue";
     }
 }
 </script>
