@@ -74,7 +74,7 @@ let stream = null;
 window.addEventListener("load", async () => {
     hasil.innerHTML = "⏳ Menyiapkan AI...";
     model = await mobilenet.load();
-    hasil.innerHTML = "✅ AI siap. Tekan Buka Scan.";
+    hasil.innerHTML = "✅ AI siap. Silahkan Scan.";
 });
 
 // ================= TOGGLE SCAN =================
@@ -92,7 +92,7 @@ async function toggleScan(){
             video.srcObject = stream;
             await new Promise(r => video.onloadedmetadata = r);
 
-            hasil.innerHTML = "✅ Kamera aktif. Siap scan!";
+            hasil.innerHTML = "✅ Kamera aktif. Menunggu AI siap.";
             toggleBtn.innerHTML = "❌ Tutup Scan";
             scanBtn.disabled = false;
             toggleBtn.disabled = false;
