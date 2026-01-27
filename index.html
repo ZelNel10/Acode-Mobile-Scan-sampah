@@ -75,7 +75,7 @@
 </div>
 
 <script>
-  const video = document.getElementById("camera");
+const video = document.getElementById("camera");
 const canvas = document.getElementById("canvas");
 const hasil = document.getElementById("hasil");
 const cameraArea = document.getElementById("cameraArea");
@@ -86,76 +86,74 @@ const ctx = canvas.getContext("2d");
 let model = null;
 let stream = null;
 
-// =======================
-// LOAD AI MODEL
-// =======================
-async function loadModel() {
-    hasil.innerHTML = "⏳ Memuat AI (tunggu 5–10 detik)...";
-    model = await mobilenet.load();
-    hasil.innerHTML = "✅ AI siap digunakan";
-    scanBtn.disabled = false; // tombol scan aktif
-}
-loadModel();
-
 
 // =======================
-// TOGGLE KAMERA (BUKA/TUTUP)
+// TOGGLE SCAN (BUKA / TUTUP)
 // =======================
 async function toggleScan() {
     if (stream === null) {
+        // ===== BUKA SCAN =====
+        cameraArea.classList.remove("hidden");
+        hasil.innerHTML = "⏳ Menyiapkan kamera & AI...";
+        scanBtn.disabled = true;
+        toggleBtn.disabled = true;
+
         try {
+            // Aktifkan kamera belakang
             stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: "environment" }
             });
-
             video.srcObject = stream;
-            cameraArea.classList.remove("hidden");
+
+            // Tunggu video siap
+            await new Promise(resolve => {
+                video.onloadedmetadata = () => resolve();
+            });
+
+            // Load AI SEKARANG (bukan saat awal web)
+            model = await mobilenet.load();
+
+            hasil.innerHTML = "✅ Kamera & AI siap, silakan scan!";
             toggleBtn.innerHTML = "❌ Tutup Scan";
-            hasil.innerHTML = "📷 Kamera aktif, arahkan ke sampah";
+            scanBtn.disabled = false;
+            toggleBtn.disabled = false;
 
         } catch (err) {
-            hasil.innerHTML = "❌ Kamera tidak dapat diakses";
+            hasil.innerHTML = "❌ Gagal menyiapkan kamera / AI";
             stream = null;
+            toggleBtn.disabled = false;
         }
+
     } else {
+        // ===== TUTUP SCAN =====
         stream.getTracks().forEach(track => track.stop());
         video.srcObject = null;
         stream = null;
+        model = null;
 
         cameraArea.classList.add("hidden");
         toggleBtn.innerHTML = "📷 Buka Scan";
-        hasil.innerHTML = "🔒 Kamera dimatikan";
+        hasil.innerHTML = "🔒 Scan ditutup";
+        scanBtn.disabled = true;
     }
 }
 
 
 // =======================
-// LOGIKA SCAN SAMPAH
+// SCAN SAMPAH
 // =======================
 async function scanSampah() {
-    if (!model) {
-        hasil.innerHTML = "⚠️ AI masih loading...";
-        return;
-    }
-
-    if (video.readyState < 2) {
-        hasil.innerHTML = "⚠️ Kamera belum siap, tunggu sebentar...";
-        return;
-    }
-
     // Ambil gambar dari kamera
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
-    // Kirim gambar ke AI
+    // Kirim ke AI
     const predictions = await model.classify(canvas);
     const objek = predictions[0].className.toLowerCase();
     const confidence = (predictions[0].probability * 100).toFixed(2);
 
-    // =======================
     // LOGIKA ORGANIK / ANORGANIK
-    // =======================
     if (
         objek.includes("banana") ||
         objek.includes("apple") ||
