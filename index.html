@@ -87,6 +87,58 @@ const scanBtn = document.getElementById("scanBtn");
 let model;
 let stream = null;
 
+// ================= KAMUS TERJEMAHAN =================
+const translateMap = {
+    "flower":"Bunga",
+    "plant":"Tumbuhan",
+    "leaf":"Daun",
+    "tree":"Pohon",
+    "grass":"Rumput",
+    "banana":"Pisang",
+    "apple":"Apel",
+    "orange":"Jeruk",
+    "mango":"Mangga",
+    "coconut":"Kelapa",
+    "carrot":"Wortel",
+    "tomato":"Tomat",
+    "potato":"Kentang",
+    "onion":"Bawang",
+    "garlic":"Bawang putih",
+    "bread":"Roti",
+    "meat":"Daging",
+    "rice":"Nasi",
+    "egg":"Telur",
+    "pizza":"Pizza",
+    "plastic bottle":"Botol plastik",
+    "bottle":"Botol",
+    "bag":"Kantong plastik",
+    "cup":"Gelas plastik",
+    "wrapper":"Bungkus plastik",
+    "can":"Kaleng",
+    "tin":"Kaleng",
+    "glass":"Kaca",
+    "jar":"Toples kaca",
+    "paper":"Kertas",
+    "cardboard":"Kardus",
+    "book":"Buku",
+    "newspaper":"Koran",
+    "mouse":"Mouse",
+    "keyboard":"Keyboard",
+    "handphone":"HP",
+    "cable":"Kabel",
+    "computer":"Komputer"
+};
+
+function translateObjek(text){
+    let hasil = text.toLowerCase();
+    for(const key in translateMap){
+        if(hasil.includes(key)){
+            return translateMap[key];
+        }
+    }
+    return text;
+}
+
 // ================= PRELOAD AI =================
 window.addEventListener("load", async () => {
     hasil.innerHTML = "⏳ Menyiapkan AI...";
@@ -141,23 +193,23 @@ async function scanSampah(){
 
     const kategoriMap = [
         { nama: "Tumbuhan (Plants)", jenis: "Organik",
-          kata: ["flower","plant","leaf","tree","grass", "stick", "bamboo"] },
+          kata: ["flower","plant","leaf","tree","grass","stick","bamboo"] },
         { nama: "Buah (Fruits)", jenis: "Organik",
-          kata: ["grape","fruit","banana","apple","orange", "melon", "watermelon", "mango", "coconut"] },
-          { nama: "Sayur (vegetables)", jenis: "Organik",
-          kata: ["vegetable","carrot","tomato","potato", "spinach", "eggplant", "salad", "onion", "garlic"] },
+          kata: ["fruit","banana","apple","orange","melon","mango","coconut"] },
+        { nama: "Sayur (Vegetables)", jenis: "Organik",
+          kata: ["vegetable","carrot","tomato","potato","spinach","onion","garlic"] },
         { nama: "Makanan (Food)", jenis: "Organik",
-          kata: ["food","bread","meat","rice","cake","pizza", "sausage", "egg", "oat", "chicken"] },
-        { nama: "Plastik", jenis: "Anorganik",
+          kata: ["food","bread","meat","rice","cake","pizza","egg"] },
+        { nama: "Plastik (Plastic)", jenis: "Anorganik",
           kata: ["plastic","bottle","bag","cup","wrapper","packet","pouch","container"] },
-        { nama: "Logam / Kaleng", jenis: "Anorganik",
-          kata: ["can","tin","metal","aluminum", "iron"] },
-        { nama: "Kaca", jenis: "Anorganik",
-          kata: ["glass","jar", "glass bottle"] },
-        { nama: "Kertas", jenis: "Anorganik",
+        { nama: "Logam / Kaleng (Metal)", jenis: "Anorganik",
+          kata: ["can","tin","metal","aluminum","iron"] },
+        { nama: "Kaca (Glass)", jenis: "Anorganik",
+          kata: ["glass","jar"] },
+        { nama: "Kertas (Paper)", jenis: "Anorganik",
           kata: ["paper","cardboard","book","newspaper"] },
-        { nama: "Elektronik", jenis: "Anorganik",
-          kata: ["mouse", "keyboard", "handphone", "cable", "computer", "motherboard"]
+        { nama: "Elektronik (Electronic)", jenis: "Anorganik",
+          kata: ["mouse","keyboard","handphone","cable","computer"]
         }
     ];
 
@@ -186,15 +238,22 @@ async function scanSampah(){
         }
     });
 
-    const objekUtama = predictions[0].className;
+    const objekUtamaEN = predictions[0].className;
+    const objekUtamaID = translateObjek(objekUtamaEN);
     const conf = (predictions[0].probability * 100).toFixed(2);
 
     hasil.style.color = jenisSampah === "Organik" ? "green" : "blue";
 
     hasil.innerHTML = `
-        🔎 <b>Objek Terdeteksi:</b> ${objekUtama} <br>
-        📂 <b>Kategori:</b> ${kategoriDitemukan} <br>
-        ♻️ <b>Jenis Sampah:</b> ${jenisSampah} <br>
+        🔎 <b>Objek Terdeteksi:</b><br>
+        ${objekUtamaEN} (${objekUtamaID})<br><br>
+
+        📂 <b>Kategori:</b><br>
+        ${kategoriDitemukan}<br><br>
+
+        ♻️ <b>Jenis Sampah:</b><br>
+        ${jenisSampah}<br><br>
+
         📊 <b>Keyakinan AI:</b> ${conf}% 
     `;
 }
