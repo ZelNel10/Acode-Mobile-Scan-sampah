@@ -89,71 +89,46 @@ let stream = null;
 
 // ================= KAMUS TERJEMAHAN =================
 const translateMap = {
-    "flower":"Bunga",
-    "plant":"Tumbuhan",
-    "leaf":"Daun",
-    "tree":"Pohon",
-    "grass":"Rumput",
-    "banana":"Pisang",
-    "apple":"Apel",
-    "orange":"Jeruk",
-    "mango":"Mangga",
-    "coconut":"Kelapa",
-    "carrot":"Wortel",
-    "tomato":"Tomat",
-    "potato":"Kentang",
-    "onion":"Bawang",
-    "garlic":"Bawang putih",
-    "bread":"Roti",
-    "meat":"Daging",
-    "rice":"Nasi",
-    "egg":"Telur",
-    "pizza":"Pizza",
-    "plastic bottle":"Botol plastik",
-    "bottle":"Botol",
-    "bag":"Kantong plastik",
-    "cup":"Gelas plastik",
-    "wrapper":"Bungkus plastik",
-    "can":"Kaleng",
-    "tin":"Kaleng",
-    "glass":"Kaca",
-    "jar":"Toples kaca",
-    "paper":"Kertas",
-    "cardboard":"Kardus",
-    "book":"Buku",
-    "newspaper":"Koran",
-    "mouse":"Mouse",
-    "keyboard":"Keyboard",
-    "handphone":"HP",
-    "cable":"Kabel",
-    "computer":"Komputer"
+    "flower":"Bunga","plant":"Tumbuhan","leaf":"Daun","tree":"Pohon","grass":"Rumput",
+    "banana":"Pisang","apple":"Apel","orange":"Jeruk","mango":"Mangga","coconut":"Kelapa",
+    "carrot":"Wortel","tomato":"Tomat","potato":"Kentang","onion":"Bawang","garlic":"Bawang putih",
+    "bread":"Roti","meat":"Daging","rice":"Nasi","egg":"Telur","pizza":"Pizza",
+    "plastic bottle":"Botol plastik","bottle":"Botol","bag":"Kantong plastik","cup":"Gelas plastik",
+    "wrapper":"Bungkus plastik","can":"Kaleng","tin":"Kaleng","glass":"Kaca","jar":"Toples kaca",
+    "paper":"Kertas","cardboard":"Kardus","book":"Buku","newspaper":"Koran",
+    "mouse":"Mouse","keyboard":"Keyboard","handphone":"HP","cable":"Kabel","computer":"Komputer"
 };
 
 function translateObjek(text){
-    let hasil = text.toLowerCase();
+    let t = text.toLowerCase();
     for(const key in translateMap){
-        if(hasil.includes(key)){
-            return translateMap[key];
-        }
+        if(t.includes(key)) return translateMap[key];
     }
     return text;
 }
 
-// ================= PRELOAD AI =================
-window.addEventListener("load", async () => {
-    hasil.innerHTML = "⏳ Menyiapkan AI...";
-    model = await mobilenet.load();
-    hasil.innerHTML = "AI siap silahkan scan";
-});
+// ================= PASTIKAN AI SIAP DULU =================
+async function pastikanAISiap(){
+    if(!model){
+        hasil.innerHTML = "⏳ Menunggu AI siap...";
+        model = await mobilenet.load();
+        hasil.innerHTML = "✅ AI siap. Mengaktifkan kamera...";
+    }
+}
 
 // ================= TOGGLE SCAN =================
 async function toggleScan(){
     if(stream === null){
+
         cameraArea.classList.remove("hidden");
         toggleBtn.disabled = true;
-        hasil.innerHTML = "⏳ Mengaktifkan kamera...";
+        scanBtn.disabled = true;
 
         try{
+            // AI siap dulu
+            await pastikanAISiap();
+
+            // Baru kamera aktif
             stream = await navigator.mediaDevices.getUserMedia({
                 video:{ facingMode:"environment" }
             });
@@ -161,7 +136,7 @@ async function toggleScan(){
             video.srcObject = stream;
             await new Promise(r => video.onloadedmetadata = r);
 
-            hasil.innerHTML = "Kamera aktif. Menunggu AI siap.";
+            hasil.innerHTML = "✅ Kamera aktif. Silahkan scan";
             toggleBtn.innerHTML = "❌ Tutup Scan";
             scanBtn.disabled = false;
             toggleBtn.disabled = false;
@@ -238,23 +213,20 @@ async function scanSampah(){
         }
     });
 
-    const objekUtamaEN = predictions[0].className;
-    const objekUtamaID = translateObjek(objekUtamaEN);
+    const objekEN = predictions[0].className;
+    const objekID = translateObjek(objekEN);
     const conf = (predictions[0].probability * 100).toFixed(2);
 
     hasil.style.color = jenisSampah === "Organik" ? "green" : "blue";
 
     hasil.innerHTML = `
         🔎 <b>Objek Terdeteksi:</b><br>
-        ${objekUtamaEN} (${objekUtamaID})<br><br>
-
+        ${objekEN} (${objekID})<br><br>
         📂 <b>Kategori:</b><br>
         ${kategoriDitemukan}<br><br>
-
         ♻️ <b>Jenis Sampah:</b><br>
         ${jenisSampah}<br><br>
-
-        📊 <b>Keyakinan AI:</b> ${conf}% 
+        📊 <b>Keyakinan AI:</b> ${conf}%
     `;
 }
 </script>
